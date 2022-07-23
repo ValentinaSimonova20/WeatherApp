@@ -1,7 +1,6 @@
-package com.simonova.weatherapp.wheatherRequests;
+package com.simonova.weatherapp.requests.weather;
 
-import com.simonova.weatherapp.wheatherRequests.model.ApiSettings;
-import com.simonova.weatherapp.wheatherRequests.model.WeatherDailyData;
+import com.simonova.weatherapp.requests.weather.model.WeatherDailyData;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -12,7 +11,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 @FeignClient(name = "weather", url = "https://meteostat.p.rapidapi.com")
 public interface GetWeatherClient {
 
-    String RAPID_API_HOST = "meteostat.p.rapidapi.com";
     String DAILY_URL = "/point/daily";
     String LAT = "lat";
     String LON = "lon";

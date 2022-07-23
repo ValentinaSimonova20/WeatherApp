@@ -1,4 +1,4 @@
-package com.simonova.weatherapp.wheatherRequests.model;
+package com.simonova.weatherapp.requests.weather.model;
 
 import lombok.Data;
 
