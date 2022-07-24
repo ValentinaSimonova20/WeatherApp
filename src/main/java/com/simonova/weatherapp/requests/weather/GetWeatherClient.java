@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
 
-@FeignClient(name = "weather", url = "https://meteostat.p.rapidapi.com")
+@FeignClient(name = "weather", url = "${weather.api.baseUrl}")
 public interface GetWeatherClient {
 
     String DAILY_URL = "/point/daily";

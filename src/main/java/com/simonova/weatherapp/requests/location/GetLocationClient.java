@@ -6,7 +6,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "location", url = "http://api.positionstack.com")
+@FeignClient(name = "location", url = "${location.api.baseUrl}")
 public interface GetLocationClient {
 
     String QUERY = "query";
