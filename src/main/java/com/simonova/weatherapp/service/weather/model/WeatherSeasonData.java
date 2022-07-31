@@ -7,5 +7,5 @@ import java.util.List;
 @Data
 public class WeatherSeasonData {
 
-    List<TemperatureDailyInfoBySeason> data;
+    List<TemperatureInfoBySeason> data;
 }
