@@ -5,6 +5,7 @@ import com.simonova.weatherapp.requests.location.model.LocationInfo;
 import com.simonova.weatherapp.requests.weather.model.WeatherDailyData;
 import com.simonova.weatherapp.service.coordinates.CoordinatesService;
 import com.simonova.weatherapp.service.temperature.TemperatureService;
+import com.simonova.weatherapp.service.weather.model.SeasonYearModel;
 import com.simonova.weatherapp.service.weather.model.TemperatureInfoBySeason;
 import com.simonova.weatherapp.service.weather.model.WeatherSeasonData;
 import lombok.RequiredArgsConstructor;
@@ -14,7 +15,6 @@ import java.time.LocalDate;
 import java.time.Month;
 import java.util.*;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.ToDoubleFunction;
 import java.util.stream.Collectors;
@@ -52,35 +52,53 @@ public class WeatherServiceImpl implements WeatherService {
     public WeatherSeasonData getWeatherSeasonData(WeatherRequest weatherRequest) {
         List<TemperatureInfoBySeason> temperatureInfoBySeasons = getTempInfoConnectedToSeason(weatherRequest);
 
-        Map<List<String>,  String> minTempBySeasonAndYear= getMinTempBySeasonAndYear(temperatureInfoBySeasons);
-        Map<List<String>,  String> maxTempBySeasonAndYear= getMaxTempBySeasonAndYear(temperatureInfoBySeasons);
-        Map<List<String>,  String> avgTempBySeasonAndYear = getAvgTempBySeasonAndYear(temperatureInfoBySeasons);
-
         // connect three result
-        getTemperaturesBySeason(minTempBySeasonAndYear, new ArrayList<>(), TemperatureInfoBySeason::setMinTemp);
-
-        return null;
+        return  WeatherSeasonData.builder().data(
+                getTemperaturesBySeason(
+                        getAvgTempBySeasonAndYear(temperatureInfoBySeasons),
+                        getTemperaturesBySeason(
+                                getMaxTempBySeasonAndYear(temperatureInfoBySeasons),
+                                getTemperaturesBySeason(
+                                        getMinTempBySeasonAndYear(temperatureInfoBySeasons),
+                                        new ArrayList<>(),
+                                        TemperatureInfoBySeason::setMinTemp
+                                ),
+                                TemperatureInfoBySeason::setMaxTemp
+                        ),
+                        TemperatureInfoBySeason::setAvgTemp
+                )).build();
     }
 
 
     private List<TemperatureInfoBySeason> getTemperaturesBySeason(
-            Map<List<String>,  String> mapToAddIntoResultList,
+            Map<SeasonYearModel,  String> mapToAddIntoResultList,
             List<TemperatureInfoBySeason> resultList,
             BiConsumer<TemperatureInfoBySeason, String> consumer
     ) {
-        List<TemperatureInfoBySeason> result = mapToAddIntoResultList.entrySet().stream().peek(
-                listStringEntry -> {
-
-                }
-        );
+        mapToAddIntoResultList.forEach((key, value) -> getYearAndSeasonObject(key, resultList).ifPresentOrElse(
+                yearAndSeason -> consumer.accept(yearAndSeason, value),
+                () -> {
+                    TemperatureInfoBySeason newObject = new TemperatureInfoBySeason(key.getSeason(), key.getYear());
+                    consumer.accept(newObject, value);
+                    resultList.add(newObject);
+                }));
         return resultList;
+    }
 
+    private Optional<TemperatureInfoBySeason> getYearAndSeasonObject(
+            SeasonYearModel key,
+            List<TemperatureInfoBySeason> resultArray
+    ) {
+        return resultArray.stream().filter(temperatureInfoBySeason ->
+                temperatureInfoBySeason.getSeason().equals(key.getSeason()) &&
+                        temperatureInfoBySeason.getYear().equals(key.getYear())
+        ).findFirst();
     }
 
     /**
-     * @return min temp of min temps
+     * @return min temp of min temps in format: SeasonYearModel - min temp
      */
-    private Map<List<String>, String>  getMinTempBySeasonAndYear(List<TemperatureInfoBySeason> weatherInfo) {
+    private Map<SeasonYearModel, String>  getMinTempBySeasonAndYear(List<TemperatureInfoBySeason> weatherInfo) {
         return getValueFromSummarize(
                 getDefaultSummarize(
                         weatherInfo,
@@ -90,9 +108,9 @@ public class WeatherServiceImpl implements WeatherService {
     }
 
     /**
-     * @return max temp of max temps
+     * @return max temp of max temps in format: SeasonYearModel - max temp
      */
-    private Map<List<String>, String> getMaxTempBySeasonAndYear(List<TemperatureInfoBySeason> weatherInfo) {
+    private Map<SeasonYearModel, String> getMaxTempBySeasonAndYear(List<TemperatureInfoBySeason> weatherInfo) {
         return getValueFromSummarize(
                 getDefaultSummarize(
                         weatherInfo,
@@ -102,13 +120,13 @@ public class WeatherServiceImpl implements WeatherService {
     }
 
     /**
-     * @return avg temp of avg temps
+     * @return avg temp of avg temps in format: SeasonYearModel - avg temp
      */
-    private Map<List<String>, String> getAvgTempBySeasonAndYear(List<TemperatureInfoBySeason> weatherInfo) {
+    private Map<SeasonYearModel, String> getAvgTempBySeasonAndYear(List<TemperatureInfoBySeason> weatherInfo) {
         return getValueFromSummarize(
                 getDefaultSummarize(
                         weatherInfo,
-                        temp -> Double.parseDouble(temp.getAvgTemp())
+                        temp -> temp.getAvgTemp() != null ? Double.parseDouble(temp.getAvgTemp()) : Double.POSITIVE_INFINITY
                 ), temp -> String.valueOf(temp.getValue().getAverage())
         );
     }
@@ -116,9 +134,9 @@ public class WeatherServiceImpl implements WeatherService {
     /**
      * @return key and certain value from summarize statistics
      */
-    private Map<List<String>, String> getValueFromSummarize(
-            Map<List<String>, DoubleSummaryStatistics> summarize,
-            Function<Map.Entry<List<String>, DoubleSummaryStatistics>, String> valueMapper
+    private Map<SeasonYearModel, String> getValueFromSummarize(
+            Map<SeasonYearModel, DoubleSummaryStatistics> summarize,
+            Function<Map.Entry<SeasonYearModel, DoubleSummaryStatistics>, String> valueMapper
     ) {
         return summarize
                 .entrySet()
@@ -129,7 +147,7 @@ public class WeatherServiceImpl implements WeatherService {
     /**
      * @return key and its summarize statistics by certain parameter
      */
-    private Map<List<String>, DoubleSummaryStatistics> getDefaultSummarize(
+    private Map<SeasonYearModel, DoubleSummaryStatistics> getDefaultSummarize(
             List<TemperatureInfoBySeason> weatherInfo,
             ToDoubleFunction<TemperatureInfoBySeason> mapper
     ) {
@@ -138,13 +156,13 @@ public class WeatherServiceImpl implements WeatherService {
                         temperatureInfoBySeason.getSeason(),
                         temperatureInfoBySeason.getYear()
                 ), Collectors.summarizingDouble(mapper))
+        ).entrySet().stream().collect(Collectors.toMap(entrySet ->
+                new SeasonYearModel(entrySet.getKey().get(0), entrySet.getKey().get(1)), Map.Entry::getValue)
         );
     }
 
     // get dailyInfo temperature. There are duplicates in season and year in result
     private List<TemperatureInfoBySeason> getTempInfoConnectedToSeason(WeatherRequest weatherRequest) {
-        // now method return data by month
-        //TODO: return data by seasons (winter, summer, etc)
         return getWeatherDailyData(weatherRequest).getData().stream()
                 .map(temperatureDailyInfo ->
                         new TemperatureInfoBySeason(
@@ -175,6 +193,5 @@ public class WeatherServiceImpl implements WeatherService {
     private String getYearOfDate(String date) {
         return String.valueOf(LocalDate.parse(date).getYear());
     }
-
 
 }

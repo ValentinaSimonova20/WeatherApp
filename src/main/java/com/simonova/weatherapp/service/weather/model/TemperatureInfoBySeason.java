@@ -1,12 +1,15 @@
 package com.simonova.weatherapp.service.weather.model;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
-import java.util.Objects;
 
 @Data
 @AllArgsConstructor
+@Builder
+@NoArgsConstructor
 public class TemperatureInfoBySeason {
     private String season;
     private String year;
@@ -14,22 +17,8 @@ public class TemperatureInfoBySeason {
     private String minTemp;
     private String avgTemp;
 
-    public TemperatureInfoBySeason(String maxTemp, String minTemp, String avgTemp) {
-        this.maxTemp = maxTemp;
-        this.minTemp = minTemp;
-        this.avgTemp = avgTemp;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        TemperatureInfoBySeason that = (TemperatureInfoBySeason) o;
-        return Objects.equals(season, that.season) && Objects.equals(year, that.year);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(season, year);
+    public TemperatureInfoBySeason(String season, String year) {
+        this.season = season;
+        this.year = year;
     }
 }
